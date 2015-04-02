@@ -187,6 +187,31 @@ class Nmf(object):
         else:
             return np.mat(conn, dtype='d')
 
+    def connectivity2(self, W=None, idx=None):
+        """
+        Compute the connectivity matrix for the samples based on their basis matrix. 
+        
+        The connectivity matrix C is a symmetric matrix which shows the shared membership of the samples: entry C_ij is 1 iff sample i and 
+        sample j belong to the same cluster, 0 otherwise. Sample assignment is determined by its largest metagene expression value. 
+        
+        Return connectivity matrix.
+        
+        :param idx: Used in the multiple NMF model. In factorizations following
+            standard NMF model or nonsmooth NMF model ``idx`` is always None.
+        :type idx: None or `str` with values 'coef' or 'coef1' (`int` value of 0 or 1, respectively) 
+        """
+        V = self.target(idx)
+        W = self.basis() if W == None else W
+        ## largest value of each row, which are samples; use axis = 1;
+        _, idx = argmax(W, axis=1)
+        mat1 = repmat(idx.T, V.shape[0], 1)
+        mat2 = repmat(idx, 1, V.shape[0])
+        conn = elop(mat1, mat2, eq)
+        if sp.isspmatrix(conn):
+            return conn.__class__(conn, dtype='d')
+        else:
+            return np.mat(conn, dtype='d')
+
     def consensus(self, idx=None):
         """
         Compute consensus matrix as the mean connectivity matrix across multiple runs of the factorization. It has been
@@ -211,6 +236,32 @@ class Nmf(object):
             return sop(cons, self.n_run, div)
         else:
             return self.connectivity(H=self.coef(idx), idx=idx)
+
+    def consensus2(self, idx=None):
+        """
+        Compute consensus matrix as the mean connectivity matrix across multiple runs of the factorization. It has been
+        proposed by [Brunet2004]_ to help visualize and measure the stability of the clusters obtained by NMF.
+        
+        Here use the output of connectivity2;
+        
+        Tracking of matrix factors across multiple runs must be enabled for computing consensus matrix. For results
+        of a single NMF run, the consensus matrix reduces to the connectivity matrix.
+        
+        :param idx: Used in the multiple NMF model. In factorizations following
+            standard NMF model or nonsmooth NMF model ``idx`` is always None.
+        :type idx: None or `str` with values 'coef' or 'coef1' (`int` value of 0 or 1, respectively) 
+        """
+        V = self.target(idx)
+        if self.track_factor:
+            if sp.isspmatrix(V):
+                cons = V.__class__((V.shape[0], V.shape[0]), dtype=V.dtype)
+            else:
+                cons = np.mat(np.zeros((V.shape[0], V.shape[0])))
+            for i in range(self.n_run):
+                cons += self.connectivity2(W=self.tracker.get_factor(i).W)
+            return sop(cons, self.n_run, div)
+        else:
+            return self.connectivity2(W=self.basis())
 
     def dim(self, idx=None):
         """
@@ -471,6 +522,61 @@ class Nmf(object):
         # defined by the linkage matrix Z and matrix Y from which Z was
         # generated
         return cophenet(Z, Y)[0]
+
+    def coph_cor2(self, idx=None):
+        """
+        Compute cophenetic correlation coefficient of consensus matrix, generally obtained from multiple NMF runs. 
+        
+        coph_cor2 uses the consensus2 results;
+        
+        The cophenetic correlation coefficient is measure which indicates the dispersion of the consensus matrix and is based 
+        on the average of connectivity matrices. It measures the stability of the clusters obtained from NMF. 
+        It is computed as the Pearson correlation of two distance matrices: the first is the distance between samples induced by the 
+        consensus matrix; the second is the distance between samples induced by the linkage used in the reordering of the consensus 
+        matrix [Brunet2004]_.
+        
+        Return real number. In a perfect consensus matrix, cophenetic correlation equals 1. When the entries in consensus matrix are
+        scattered between 0 and 1, the cophenetic correlation is < 1. We observe how this coefficient changes as factorization rank 
+        increases. We select the first rank, where the magnitude of the cophenetic correlation coefficient begins to fall [Brunet2004]_.
+        
+        :param idx: Used in the multiple NMF model. In factorizations following standard NMF model or nonsmooth NMF model
+                    :param:`idx` is always None.
+        :type idx: None or `str` with values 'coef' or 'coef1' (`int` value of 0 or 1, respectively) 
+        """
+        A = self.consensus2(idx=idx)
+        # upper diagonal elements of consensus
+        avec = np.array([A[i, j] for i in range(A.shape[0] - 1)
+                        for j in range(i + 1, A.shape[1])])
+        # consensus entries are similarities, conversion to distances
+        Y = 1 - avec
+        Z = linkage(Y, method='average')
+        # cophenetic correlation coefficient of a hierarchical clustering
+        # defined by the linkage matrix Z and matrix Y from which Z was
+        # generated
+        return cophenet(Z, Y)[0]
+
+    def dispersion2(self, idx=None):
+        """
+        Compute the dispersion coefficient of consensus matrix, generally obtained from multiple
+        NMF runs.
+        
+        Here use the consensus2 results;
+        
+        The dispersion coefficient is based on the average of connectivity matrices [Park2007]_.
+        It measures the reproducibility of the clusters obtained from multiple NMF runs.
+        
+        Return the real value in [0,1]. Dispersion is 1 if for a perfect consensus matrix,
+        where all entries are 0 or 1. A perfect consensus matrix is obtained only when all
+        the connectivity matrices are the same, meaning that the algorithm gave the same
+        clusters at each run.
+        
+        :param idx: Used in the multiple NMF model. In factorizations following
+           standard NMF model or nonsmooth NMF model ``idx`` is always None.
+        :type idx: None or `str` with values 'coef' or 'coef1' (`int` value of 0 or 1, respectively) 
+        """
+        C = self.consensus2(idx=idx)
+        return sum([sum([4 * (C[i, j] - 0.5) ** 2 for j in range(C.shape[1])]) for i in range(C.shape[0])]) / float(C.shape[1] ** 2)
+        # return sum(sum(4 * (C[i, j] - 0.5) ** 2 for j in range(C.shape[1])) for i in range(C.shape[0]))
 
     def dispersion(self, idx=None):
         """
