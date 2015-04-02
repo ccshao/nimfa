@@ -575,8 +575,8 @@ class Nmf(object):
         :type idx: None or `str` with values 'coef' or 'coef1' (`int` value of 0 or 1, respectively) 
         """
         C = self.consensus2(idx=idx)
-        return sum([sum([4 * (C[i, j] - 0.5) ** 2 for j in range(C.shape[1])]) for i in range(C.shape[0])]) / float(C.shape[1] ** 2)
-        # return sum(sum(4 * (C[i, j] - 0.5) ** 2 for j in range(C.shape[1])) for i in range(C.shape[0]))
+        dispersion2 = np.sum(4 * np.multiply(C - 0.5, C - 0.5)) / C.size
+        return dispersion2
 
     def dispersion(self, idx=None):
         """
