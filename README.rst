@@ -1,7 +1,7 @@
 
 Note
 ============
-NMF for metacells analysis is baisng on **nimfa 1.0** with modifications for cophenetic coefficient. 
+Modifications are based on **nimfa 1.0** with modifications for cophenetic coefficient. 
 
 
 Notification
