@@ -3,6 +3,18 @@ Note
 ============
 Modifications are based on **nimfa 1.0**. 
 
+**An example by nimfa 1.0**
+
+import nimfa
+
+import numpy as np
+
+V = np.random.random((10000, 1000))
+
+fctr = nimfa.mf(V, seed = 'random_vcol', method = 'lsnmf', rank = 40, max_iter = 50)
+
+fctr_res = nimfa.mf_run(fctr)
+
 
 Notification
 ============
