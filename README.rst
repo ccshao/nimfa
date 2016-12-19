@@ -3,7 +3,7 @@ Note
 ============
 Modifications are based on **nimfa 1.0**. 
 
-**An example by nimfa 1.0**
+**An example**
 
 import nimfa
 
