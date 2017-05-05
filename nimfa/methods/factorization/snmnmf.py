@@ -40,7 +40,7 @@ Gene and miRNA expression matrices are simultaneously factored into a common
 basis matrix (W) and two coefficients matrices (H and H1). Additional knowledge
 is incorporated into this framework with network regularized constraints.
 Because of the imposed sparsity constraints easily interpretable solution is
-obtained. In [Zhang2011]_ decomposed matrix componentsare used to provide
+obtained. In [Zhang2011]_ decomposed matrix components are used to provide
 information about miRNA-gene regulatory comodules. They identified the comodules
 based on shared components (a column in basis matrix W) with significant
 association values in the corresponding rows of coefficients matrices, H1 and H2.
@@ -190,10 +190,10 @@ class Snmnmf(nmf_mm.Nmf_mm):
         self.name = "snmnmf"
         self.aseeds = ["random", "fixed", "nndsvd", "random_c", "random_vcol"]
         nmf_mm.Nmf_mm.__init__(self, vars())
-        if self.A is not None:
+        if self.A is None:
             self.A = sp.csr_matrix((self.V1.shape[1], self.V1.shape[1]))
         self.A = self.A.tocsr() if sp.isspmatrix(self.A) else np.mat(self.A)
-        if self.B is not None:
+        if self.B is None:
             self.B = sp.csr_matrix((self.V.shape[1], self.V1.shape[1]))
         self.B = self.B.tocsr() if sp.isspmatrix(self.B) else np.mat(self.B)
         self.tracker = mf_track.Mf_track() if self.track_factor and self.n_run > 1 \

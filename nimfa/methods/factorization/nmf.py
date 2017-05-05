@@ -4,10 +4,10 @@
 Nmf (``methods.factorization.nmf``)
 ###################################
 
-**Standard Nonnegative Matrix Factorization (NMF)** [Lee2001]_, [Lee1999]. 
+**Standard Nonnegative Matrix Factorization (NMF)** [Lee2001]_, [Lee1999]_.
 
 Based on Kullback-Leibler divergence, it uses simple multiplicative updates
-[Lee2001]_, [Lee1999], enhanced to avoid numerical underflow [Brunet2004]_.
+[Lee2001]_, [Lee1999]_, enhanced to avoid numerical underflow [Brunet2004]_.
 Based on Euclidean distance, it uses simple multiplicative updates [Lee2001]_.
 Different objective functions can be used, namely Euclidean distance, divergence
 or connectivity matrix convergence.
@@ -110,7 +110,7 @@ class Nmf(nmf_std.Nmf_std):
     :param update: Type of update equations used in factorization. When specifying
        model parameter ``update`` can be assigned to:
 
-           #. 'uclidean' for classic Euclidean distance update
+           #. 'euclidean' for classic Euclidean distance update
               equations,
            #. 'divergence' for divergence update equations.
        By default Euclidean update equations are used.
