@@ -1,3 +1,23 @@
+
+**Note**  
+The module is based on nimfa 1.3.2 now.  
+The scripts to run on single-cell RNAseq data are put under the folder: **sc-RNAseq_scripts**  
+The data used in the paper are in the folder: **sc-RNAseq_data**  
+The input files (e.g., "lungEpithelium_full_input_.csv") should be put in the same folder with NMF_scRNAseq.py
+
+Example useages:  
+**install all necessary dependencies before hand**
+- python: pandas, docopt, nimfa
+- R: pheatmap (ccshao/pheatmap), vegan, RColorBrewer
+
+
+python NMF_scRNAseq.py -h  
+python NMF_scRNAseq.py --min_rank=4 --max_rank=5 --max_depth=2 --RHeatmap=/home/shao/Desktop/Projects/NMF/nimfa/sc-RNAseq_scripts/nmfHeatmap.R
+
+
+
+
+
 Nimfa
 -----
 
