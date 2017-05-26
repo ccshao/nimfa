@@ -2,14 +2,15 @@
 """run NMF on sc-RNAseq data.
 
 Usage:
-    NMF_scRNAseq.py --max_rank=<int> --max_depth=<int> --RHeatmap=<str> 
+    NMF_scRNAseq.py --min_rank=<int> --max_rank=<int> --max_depth=<int> --RHeatmap=<str> 
         [--method=<str>] [--seed=<str>] [--depth_level=<int>] 
         [--n_run=<int>] [--max_iter=<int>] [--cores=<int>] 
         [--dataSource=<str>] [--algor=<str>]
 
 Options:
     -h --help              # show this screen
-    --max_rank <int>       # maximum number of rank [default: 4]
+    --min_rank <int>       # minimum number of rank
+    --max_rank <int>       # maximum number of rank
     --max_depth <int>      # maximum depth to run NMF
     --RHeatmap <str>       # full path to the heatmap R files
     --method <str>         # method implemented in nimfa. lsnmf, bd and nmf (standard NMF) are [default: lsnmf]
@@ -52,6 +53,7 @@ def time_elapsed(label):
 def FUN_NMF_internative(nimfa_method, 
         seed,
         depth_level, 
+        min_rank,
         max_rank, 
         max_depth, 
         n_run, 
@@ -68,7 +70,7 @@ def FUN_NMF_internative(nimfa_method,
         LI_inputFiles = glob.glob("*_input_*")
         # depth_level += 1
         for inputFile in LI_inputFiles:
-            rank_ranges = range(2, max_rank + 1)
+            rank_ranges = range(min_rank, max_rank + 1)
 
             ## generate folders for different rank
             current_path = os.getcwd()
@@ -79,7 +81,7 @@ def FUN_NMF_internative(nimfa_method,
                 LI_prefix = [metaCells + "_depth_" + str(depth_level) + "_r" + str(rank)  for rank in rank_ranges]
             LI_folders = [os.path.join(current_path, folder_name) for folder_name in LI_prefix]
             print "(II) working with depth:", depth_level
-            print "(II) input file is:", inputFile
+            print "(II) input file:", inputFile
             ## results will be overwritten!
             ## read the data
             dat_path = os.path.join(current_path, inputFile)
@@ -87,7 +89,7 @@ def FUN_NMF_internative(nimfa_method,
 
             ## skip if less than 10 cells exit!
             if npDat.shape[0] < 10:
-                print "(II) Skip as there are less 10 cells in the cluster!"
+                print "(II) !Skip as there are less 10 cells in the cluster!"
             else:
                 # FUN_estimateRank(npDat, nimfa_method, seed, rank_ranges)
                 for current_folder in LI_folders: 
@@ -112,9 +114,11 @@ def FUN_NMF_internative(nimfa_method,
                             RHeatmap)
                     # pdb.set_trace()
                     FUN_NMF_generate_files(npDat)
+                    print "(II) start new run..."
                     FUN_NMF_internative(nimfa_method,
                             seed, 
                             depth_level + 1, 
+                            min_rank,
                             max_rank,
                             current_depth, 
                             n_run, 
@@ -158,7 +162,7 @@ def FUN_NMF_internative_run(npDat,
     NMF_rss = res.fit.rss()
     NMF_evar = res.fit.evar()
     # print "(==) Algorithm: %s" %(algor)
-    print "(==) NMF rss: %.4f, evar: %.4f, spare_W: %.4f, spare_H: %.4f \n" %(NMF_rss, NMF_evar, NMF_sparW, NMF_sparH)
+    print "(==) rss: %.2f, evar: %.2f, spare_W: %.2f, spare_H: %.2f \n" %(NMF_rss, NMF_evar, NMF_sparW, NMF_sparH)
     ## to start with 1 instead of 0
     metaCells = ["metaCells_" + str(i + 1) for i in range(rank)]
 
@@ -241,12 +245,13 @@ def FUN_nmf_run(npDat,
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    print arguments
+    # print arguments
     nimfa_methods = {"lsnmf":nimfa.Lsnmf, "bd":nimfa.Bd, "nmf":nimfa.Nmf}
 
     FUN_NMF_internative(nimfa_methods[arguments["--method"]],
              seed = arguments["--seed"],
              depth_level = int(arguments["--depth_level"]),
+             min_rank = int(arguments["--min_rank"]), 
              max_rank = int(arguments["--max_rank"]), 
              max_depth = int(arguments["--max_depth"]), 
              n_run = int(arguments["--n_run"]),
