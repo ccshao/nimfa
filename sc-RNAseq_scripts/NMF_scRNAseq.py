@@ -2,12 +2,13 @@
 """run NMF on sc-RNAseq data.
 
 Usage:
-    NMF_scRNAseq.py --max_rank=<int> --max_depth=<int> [--method=<str>] [--seed=<str>] [--depth_level=<int>] [--n_run=<int>] [--max_iter=<int>] [--cores=<int>] [--dataSource=<str>] [--algor=<str>]
+    NMF_scRNAseq.py --max_rank=<int> --max_depth=<int> --RHeatmap=<str> [--method=<str>] [--seed=<str>] [--depth_level=<int>] [--n_run=<int>] [--max_iter=<int>] [--cores=<int>] [--dataSource=<str>] [--algor=<str>]
 
 Options:
     -h --help              # show this screen
     --max_rank <int>       # maximum number of rank [default: 4]
     --max_depth <int>      # maximum depth to run NMF
+    --RHeatmap <str>       # full path to the heatmap R files
     --method <str>         # method implemented in nimfa. lsnmf, bd and nmf (standard NMF) are [default: lsnmf]
     --seed <str>           # seeding choice [default: nndsvd]
     --depth_level <int>    # depth_level, 1 for the start [default: 1]
@@ -32,8 +33,6 @@ from contextlib import contextmanager
 import timeit
 import time
 
-RHeatmap = "nmfHeatmap.R"
-
 @contextmanager
 def time_elapsed(label):
     start_time = timeit.default_timer()
@@ -48,16 +47,19 @@ def time_elapsed(label):
 ################################################################################
 
 def FUN_NMF_internative(nimfa_method, 
-        seed = "nndsvd",
-        depth_level = 1, 
-        max_rank = 5, 
-        max_depth = 2, 
-        n_run = 1, 
-        max_iter = 50000, 
+        seed,
+        depth_level, 
+        max_rank, 
+        max_depth, 
+        n_run, 
+        max_iter, 
         # estimateRank = False, 
-        cores = 3,
-        dataSource = "unknown",
-        algor = "unknown"):
+        cores,
+        dataSource,
+        algor,
+        RHeatmap):
+
+    # pdb.set_trace()
     if max_depth > 0:
         current_depth = max_depth - 1
         LI_inputFiles = glob.glob("*_input_*")
@@ -99,7 +101,8 @@ def FUN_NMF_internative(nimfa_method,
                         n_run, 
                         max_iter,
                         dataSource, 
-                        algor)
+                        algor, 
+                        RHeatmap)
                 # pdb.set_trace()
                 FUN_NMF_generate_files(npDat)
                 FUN_NMF_internative(nimfa_method,
@@ -112,7 +115,8 @@ def FUN_NMF_internative(nimfa_method,
                         # estimateRank, 
                         cores,
                         dataSource,
-                        algor)
+                        algor, 
+                        RHeatmap)
                 os.chdir("..")
     else:
         print "(==) reach max depth"
@@ -128,7 +132,8 @@ def FUN_NMF_internative_run(npDat,
         n_run, 
         max_iter,
         datSource, 
-        algor):
+        algor, 
+        RHeatmap):
     ## process the path to the file;
     # pdb.set_trace()
     dat = npDat
@@ -229,14 +234,13 @@ def FUN_nmf_run(npDat,
 
 ################################################################################
 
-
 if __name__ == '__main__':
     arguments = docopt(__doc__)
     print arguments
-    nimfa_methods = {"lsnmf":nimfa.Lfnmf, "bd":nimfa.Bd, "nmf":nimfa.Nmf}
+    nimfa_methods = {"lsnmf":nimfa.Lsnmf, "bd":nimfa.Bd, "nmf":nimfa.Nmf}
 
     FUN_NMF_internative(nimfa_methods[arguments["--method"]],
-             seed = arguments["--depth_level"],
+             seed = arguments["--seed"],
              depth_level = int(arguments["--depth_level"]),
              max_rank = int(arguments["--max_rank"]), 
              max_depth = int(arguments["--max_depth"]), 
@@ -244,6 +248,7 @@ if __name__ == '__main__':
              cores = int(arguments["--cores"]),
              max_iter = int(arguments["--max_iter"]), 
              dataSource = arguments["--dataSource"], 
-             algor = arguments["--algor"])
+             algor = arguments["--algor"],
+             RHeatmap = arguments["--RHeatmap"])
 
 
