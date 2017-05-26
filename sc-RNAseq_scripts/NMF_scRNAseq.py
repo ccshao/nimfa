@@ -85,44 +85,48 @@ def FUN_NMF_internative(nimfa_method,
             dat_path = os.path.join(current_path, inputFile)
             npDat= pd.read_csv(dat_path, index_col = 0, sep = '\t', header = 0)
 
-            # FUN_estimateRank(npDat, nimfa_method, seed, rank_ranges)
-            for current_folder in LI_folders: 
-                if not os.path.exists(current_folder):
+            ## skip if less than 10 cells exit!
+            if npDat.shape[0] < 10:
+                print "(II) Skip as there are less 10 cells in the cluster!"
+            else:
+                # FUN_estimateRank(npDat, nimfa_method, seed, rank_ranges)
+                for current_folder in LI_folders: 
+                    if not os.path.exists(current_folder):
+                        # pdb.set_trace()
+                        os.makedirs(current_folder)
+                for current_folder in LI_folders:
+                    ## folder name: depth_1_1, depth_1_2
+                    os.chdir(current_folder)
+                    ## actual run, will modify from existing codes
+                    rank = int(os.path.basename(current_folder).split("_")[-1].split("r")[1])
+                    FUN_NMF_internative_run(npDat, 
+                            nimfa_method,
+                            seed, 
+                            # estimateRank, 
+                            rank,
+                            cores,
+                            n_run, 
+                            max_iter,
+                            dataSource, 
+                            algor, 
+                            RHeatmap)
                     # pdb.set_trace()
-                    os.makedirs(current_folder)
-            for current_folder in LI_folders:
-                ## folder name: depth_1_1, depth_1_2
-                os.chdir(current_folder)
-                ## actual run, will modify from existing codes
-                rank = int(os.path.basename(current_folder).split("_")[-1].split("r")[1])
-                FUN_NMF_internative_run(npDat, 
-                        nimfa_method,
-                        seed, 
-                        # estimateRank, 
-                        rank,
-                        cores,
-                        n_run, 
-                        max_iter,
-                        dataSource, 
-                        algor, 
-                        RHeatmap)
-                # pdb.set_trace()
-                FUN_NMF_generate_files(npDat)
-                FUN_NMF_internative(nimfa_method,
-                        seed, 
-                        depth_level + 1, 
-                        max_rank,
-                        current_depth, 
-                        n_run, 
-                        max_iter,
-                        # estimateRank, 
-                        cores,
-                        dataSource,
-                        algor, 
-                        RHeatmap)
-                os.chdir("..")
+                    FUN_NMF_generate_files(npDat)
+                    FUN_NMF_internative(nimfa_method,
+                            seed, 
+                            depth_level + 1, 
+                            max_rank,
+                            current_depth, 
+                            n_run, 
+                            max_iter,
+                            # estimateRank, 
+                            cores,
+                            dataSource,
+                            algor, 
+                            RHeatmap)
+                    os.chdir("..")
     else:
-        print "(==) reach max depth"
+        print "(==) reach max depth\n"
 
 ################################################################################
 
@@ -145,55 +149,49 @@ def FUN_NMF_internative_run(npDat,
 
     npDat = dat.as_matrix()
     n_run = 1 if seed == "nndsvd" else n_run
-    pdb.set_trace()
-    ## skip if less than 10 cells exit!
-    if dat.shape[0] < 10:
-        print "(II) Skip as there are less 10 cells in the cluster"
-    else:
-        print "(==) Target matrix size:", dat.shape
+    # pdb.set_trace()
+    input_prefix = os.path.basename(os.getcwd())
+    fileName = input_prefix + "." + datSource + "." + algor + ".R" + str(rank)
+    res = FUN_nmf_run(npDat, nimfa_method, seed, rank, n_run, max_iter)
 
-        input_prefix = os.path.basename(os.getcwd())
-        fileName = input_prefix + "." + datSource + "." + algor + ".R" + str(rank)
-        res = FUN_nmf_run(npDat, nimfa_method, seed, rank, n_run, max_iter)
+    NMF_sparW, NMF_sparH = res.fit.sparseness()
+    NMF_rss = res.fit.rss()
+    NMF_evar = res.fit.evar()
+    # print "(==) Algorithm: %s" %(algor)
+    print "(==) NMF rss: %.4f, evar: %.4f, spare_W: %.4f, spare_H: %.4f \n" %(NMF_rss, NMF_evar, NMF_sparW, NMF_sparH)
+    ## to start with 1 instead of 0
+    metaCells = ["metaCells_" + str(i + 1) for i in range(rank)]
 
-        NMF_sparW, NMF_sparH = res.fit.sparseness()
-        NMF_rss = res.fit.rss()
-        NMF_evar = res.fit.evar()
-        # print "(==) Algorithm: %s" %(algor)
-        print "(==) NMF rss: %.4f, evar: %.4f, spare_W: %.4f, spare_H: %.4f" %(NMF_rss, NMF_evar, NMF_sparW, NMF_sparH)
-        ## to start with 1 instead of 0
-        metaCells = ["metaCells_" + str(i + 1) for i in range(rank)]
+    ## get W matrix
+    try:
+        resW = pd.DataFrame(res.basis().todense())
+        # print " (II) scipy sparse matrixLI_cells"
+    except:
+        resW = pd.DataFrame(res.basis())
+        # print "(II) numpy matrix"
+    resW.index = rowN
+    resW.columns = metaCells
+    resW.to_csv(fileName + ".basis.csv", sep = "\t", quoting = False) 
+    ## normalized by row;
+    resWNor = resW.div(resW.sum(axis=1), axis=0)
+    fileName_W = fileName + ".basis.nor.csv"
+    resWNor.to_csv(fileName_W, sep = "\t", quoting = False) 
+    subprocess.call(["Rscript", "--vanilla", RHeatmap, fileName_W])
 
-        ## get W matrix
-        try:
-            resW = pd.DataFrame(res.basis().todense())
-            # print " (II) scipy sparse matrixLI_cells"
-        except:
-            resW = pd.DataFrame(res.basis())
-            # print "(II) numpy matrix"
-        resW.index = rowN
-        resW.columns = metaCells
-        resW.to_csv(fileName + ".basis.csv", sep = "\t", quoting = False) 
-        ## normalized by row;
-        resWNor = resW.div(resW.sum(axis=1), axis=0)
-        fileName_W = fileName + ".basis.nor.csv"
-        resWNor.to_csv(fileName_W, sep = "\t", quoting = False) 
-        subprocess.call(["Rscript", "--vanilla", RHeatmap, fileName_W])
-
-        ## get H matrix
-        try:
-            resH = pd.DataFrame(res.coef().todense())
-            # print "(II) scipy sparse matrix"
-        except:
-            resH = pd.DataFrame(res.coef())
-            # print "(II) numpy matrix"
-        resH.columns = colN 
-        resH.index = metaCells
-        resH = resH.T
-        resH.to_csv(fileName + ".coefficient.csv", sep = "\t", quoting = False) 
-        resHNor = resH.div(resH.sum(axis = 1), axis = 0)
-        fileName_H = fileName + ".coefficient.nor.csv"
-        resHNor.to_csv(fileName_H, sep = "\t", quoting = False) 
+    ## get H matrix
+    try:
+        resH = pd.DataFrame(res.coef().todense())
+        # print "(II) scipy sparse matrix"
+    except:
+        resH = pd.DataFrame(res.coef())
+        # print "(II) numpy matrix"
+    resH.columns = colN 
+    resH.index = metaCells
+    resH = resH.T
+    resH.to_csv(fileName + ".coefficient.csv", sep = "\t", quoting = False) 
+    resHNor = resH.div(resH.sum(axis = 1), axis = 0)
+    fileName_H = fileName + ".coefficient.nor.csv"
+    resHNor.to_csv(fileName_H, sep = "\t", quoting = False) 
 
 ################################################################################
  
