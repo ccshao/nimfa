@@ -2,7 +2,10 @@
 """run NMF on sc-RNAseq data.
 
 Usage:
-    NMF_scRNAseq.py --max_rank=<int> --max_depth=<int> --RHeatmap=<str> [--method=<str>] [--seed=<str>] [--depth_level=<int>] [--n_run=<int>] [--max_iter=<int>] [--cores=<int>] [--dataSource=<str>] [--algor=<str>]
+    NMF_scRNAseq.py --max_rank=<int> --max_depth=<int> --RHeatmap=<str> 
+        [--method=<str>] [--seed=<str>] [--depth_level=<int>] 
+        [--n_run=<int>] [--max_iter=<int>] [--cores=<int>] 
+        [--dataSource=<str>] [--algor=<str>]
 
 Options:
     -h --help              # show this screen
@@ -63,14 +66,14 @@ def FUN_NMF_internative(nimfa_method,
     if max_depth > 0:
         current_depth = max_depth - 1
         LI_inputFiles = glob.glob("*_input_*")
-        depth_level += 1
+        # depth_level += 1
         for inputFile in LI_inputFiles:
             rank_ranges = range(2, max_rank + 1)
 
             ## generate folders for different rank
             current_path = os.getcwd()
             if "metaCells" not in inputFile:
-                LI_prefix = ["depth_" + str(depth_level) + "_r" + str(rank)  for rank in rank_ranges]
+                LI_prefix = ["depth_" + str(depth_level) + "_r" + str(rank) for rank in rank_ranges]
             else:
                 metaCells = inputFile.split(".")[1].rsplit("_", 2)[0]
                 LI_prefix = [metaCells + "_depth_" + str(depth_level) + "_r" + str(rank)  for rank in rank_ranges]
@@ -107,7 +110,7 @@ def FUN_NMF_internative(nimfa_method,
                 FUN_NMF_generate_files(npDat)
                 FUN_NMF_internative(nimfa_method,
                         seed, 
-                        depth_level, 
+                        depth_level + 1, 
                         max_rank,
                         current_depth, 
                         n_run, 
@@ -142,51 +145,55 @@ def FUN_NMF_internative_run(npDat,
 
     npDat = dat.as_matrix()
     n_run = 1 if seed == "nndsvd" else n_run
+    pdb.set_trace()
+    ## skip if less than 10 cells exit!
+    if dat.shape[0] < 10:
+        print "(II) Skip as there are less 10 cells in the cluster"
+    else:
+        print "(==) Target matrix size:", dat.shape
 
-    print "(==) Target matrix size:", dat.shape
+        input_prefix = os.path.basename(os.getcwd())
+        fileName = input_prefix + "." + datSource + "." + algor + ".R" + str(rank)
+        res = FUN_nmf_run(npDat, nimfa_method, seed, rank, n_run, max_iter)
 
-    input_prefix = os.path.basename(os.getcwd())
-    fileName = input_prefix + "." + datSource + "." + algor + ".R" + str(rank)
-    res = FUN_nmf_run(npDat, nimfa_method, seed, rank, n_run, max_iter)
+        NMF_sparW, NMF_sparH = res.fit.sparseness()
+        NMF_rss = res.fit.rss()
+        NMF_evar = res.fit.evar()
+        # print "(==) Algorithm: %s" %(algor)
+        print "(==) NMF rss: %.4f, evar: %.4f, spare_W: %.4f, spare_H: %.4f" %(NMF_rss, NMF_evar, NMF_sparW, NMF_sparH)
+        ## to start with 1 instead of 0
+        metaCells = ["metaCells_" + str(i + 1) for i in range(rank)]
 
-    NMF_sparW, NMF_sparH = res.fit.sparseness()
-    NMF_rss = res.fit.rss()
-    NMF_evar = res.fit.evar()
-    # print "(==) Algorithm: %s" %(algor)
-    print "(==) NMF rss: %.4f, evar: %.4f, spare_W: %.4f, spare_H: %.4f" %(NMF_rss, NMF_evar, NMF_sparW, NMF_sparH)
-    ## to start with 1 instead of 0
-    metaCells = ["metaCells_" + str(i + 1) for i in range(rank)]
+        ## get W matrix
+        try:
+            resW = pd.DataFrame(res.basis().todense())
+            # print " (II) scipy sparse matrixLI_cells"
+        except:
+            resW = pd.DataFrame(res.basis())
+            # print "(II) numpy matrix"
+        resW.index = rowN
+        resW.columns = metaCells
+        resW.to_csv(fileName + ".basis.csv", sep = "\t", quoting = False) 
+        ## normalized by row;
+        resWNor = resW.div(resW.sum(axis=1), axis=0)
+        fileName_W = fileName + ".basis.nor.csv"
+        resWNor.to_csv(fileName_W, sep = "\t", quoting = False) 
+        subprocess.call(["Rscript", "--vanilla", RHeatmap, fileName_W])
 
-    ## get W matrix
-    try:
-        resW = pd.DataFrame(res.basis().todense())
-        # print " (II) scipy sparse matrixLI_cells"
-    except:
-        resW = pd.DataFrame(res.basis())
-        # print "(II) numpy matrix"
-    resW.index = rowN
-    resW.columns = metaCells
-    resW.to_csv(fileName + ".basis.csv", sep = "\t", quoting = False) 
-    ## normalized by row;
-    resWNor = resW.div(resW.sum(axis=1), axis=0)
-    fileName_W = fileName + ".basis.nor.csv"
-    resWNor.to_csv(fileName_W, sep = "\t", quoting = False) 
-    subprocess.call(["Rscript", "--vanilla", RHeatmap, fileName_W])
-
-    ## get H matrix
-    try:
-        resH = pd.DataFrame(res.coef().todense())
-        # print "(II) scipy sparse matrix"
-    except:
-        resH = pd.DataFrame(res.coef())
-        # print "(II) numpy matrix"
-    resH.columns = colN 
-    resH.index = metaCells
-    resH = resH.T
-    resH.to_csv(fileName + ".coefficient.csv", sep = "\t", quoting = False) 
-    resHNor = resH.div(resH.sum(axis = 1), axis = 0)
-    fileName_H = fileName + ".coefficient.nor.csv"
-    resHNor.to_csv(fileName_H, sep = "\t", quoting = False) 
+        ## get H matrix
+        try:
+            resH = pd.DataFrame(res.coef().todense())
+            # print "(II) scipy sparse matrix"
+        except:
+            resH = pd.DataFrame(res.coef())
+            # print "(II) numpy matrix"
+        resH.columns = colN 
+        resH.index = metaCells
+        resH = resH.T
+        resH.to_csv(fileName + ".coefficient.csv", sep = "\t", quoting = False) 
+        resHNor = resH.div(resH.sum(axis = 1), axis = 0)
+        fileName_H = fileName + ".coefficient.nor.csv"
+        resHNor.to_csv(fileName_H, sep = "\t", quoting = False) 
 
 ################################################################################
  
