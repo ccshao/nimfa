@@ -14,8 +14,7 @@ Example useages:
 python NMF_scRNAseq.py -h  
 python NMF_scRNAseq.py --min_rank=4 --max_rank=5 --max_depth=2 --RHeatmap=/home/shao/Desktop/Projects/NMF/nimfa/sc-RNAseq_scripts/nmfHeatmap.R
 
-
-
+---
 
 
 Nimfa
