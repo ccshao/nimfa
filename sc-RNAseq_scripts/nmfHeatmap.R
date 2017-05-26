@@ -1,10 +1,9 @@
 ## File Name : nmfHeatmap.R
 ## Created By : Chunxuan Shao
 ## Creation Date : Mon Jan 26 15:01:35 2015
-## Last Modified : Mon May 22 18:24:49 2017
+## Last Modified : Fri 26 May 2017 05:11:29 PM CEST
 ## Description: 1.) draw heatmap from cell basis matrix;
 
-library(grid)
 library(RColorBrewer)
 ## NMF does not work now in R 3.4.0
 suppressMessages(library(vegan))
