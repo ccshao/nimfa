@@ -50,7 +50,7 @@ def time_elapsed(label):
 
 ################################################################################
 
-def FUN_NMF_internative(nimfa_method, 
+def FUN_NMF_iterative(nimfa_method, 
         seed,
         depth_level, 
         min_rank,
@@ -101,7 +101,7 @@ def FUN_NMF_internative(nimfa_method,
                     os.chdir(current_folder)
                     ## actual run, will modify from existing codes
                     rank = int(os.path.basename(current_folder).split("_")[-1].split("r")[1])
-                    FUN_NMF_internative_run(npDat, 
+                    FUN_NMF_iterative_run(npDat, 
                             nimfa_method,
                             seed, 
                             # estimateRank, 
@@ -115,7 +115,7 @@ def FUN_NMF_internative(nimfa_method,
                     # pdb.set_trace()
                     FUN_NMF_generate_files(npDat)
                     print "(II) start new run..."
-                    FUN_NMF_internative(nimfa_method,
+                    FUN_NMF_iterative(nimfa_method,
                             seed, 
                             depth_level + 1, 
                             min_rank,
@@ -134,7 +134,7 @@ def FUN_NMF_internative(nimfa_method,
 
 ################################################################################
 
-def FUN_NMF_internative_run(npDat, 
+def FUN_NMF_iterative_run(npDat, 
         nimfa_method, 
         seed, 
         # estimateRank, 
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     # print arguments
     nimfa_methods = {"lsnmf":nimfa.Lsnmf, "bd":nimfa.Bd, "nmf":nimfa.Nmf}
 
-    FUN_NMF_internative(nimfa_methods[arguments["--method"]],
+    FUN_NMF_iterative(nimfa_methods[arguments["--method"]],
              seed = arguments["--seed"],
              depth_level = int(arguments["--depth_level"]),
              min_rank = int(arguments["--min_rank"]), 
