@@ -199,6 +199,9 @@ def FUN_NMF_iterative_run(npDat,
 
 ################################################################################
  
+"""
+subgroups cells with gene expression
+"""
 def FUN_NMF_generate_files(npDat):
     # pdb.set_trace()
     basisMat_file = glob.glob("*basis.nor.csv")[0]
