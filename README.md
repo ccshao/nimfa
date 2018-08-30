@@ -15,7 +15,7 @@
 Example useages:  
 ```
 python NMF_scRNAseq.py -h  
-python NMF_scRNAseq.py --min_rank=4 --max_rank=5 --max_depth=2 --RHeatmap=nmfHeatmap.R
+python NMF_scRNAseq.py --min_rank=4 --max_rank=5 --max_depth=2 --RHeatmap=/fullpath/nmfHeatmap.R
 ```
 
 ---------------
